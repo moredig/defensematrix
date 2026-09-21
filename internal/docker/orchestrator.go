@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -35,8 +36,8 @@ func (c *Client) StartBoat(ctx context.Context, image string, name string) (stri
 
 // NukeBoat forcefully stops and removes a container instantly
 func (c *Client) NukeBoat(ctx context.Context, containerID string) error {
-	timeout := 0
-	if err := c.cli.ContainerStop(ctx, containerID, container.StopOptions{Timeout: &timeout}); err != nil {
+	timeout := 0 * time.Second
+	if err := c.cli.ContainerStop(ctx, containerID, &timeout); err != nil {
 		return fmt.Errorf("failed to stop container %s: %w", containerID[:12], err)
 	}
 
