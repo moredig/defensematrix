@@ -1,0 +1,28 @@
+# Defense Matrix — Main Configuration
+# ------------------------------------
+
+server:
+  gateway_port: "8080"        # External-facing port
+  host: "0.0.0.0"             # Bind address
+
+fleet:
+  boat_image: "ubuntu:22.04"  # Base Docker image for all boats
+  boat_count: 3               # Always 3 — frontline, shadow, graveyard
+  recycle_interval_ms: 500    # How often recycler checks boat states
+
+detection:
+  scan_threshold: 5           # Hits before auto-nuke triggers
+  signatures_enabled: true    # Toggle signature scanning
+  log_payloads: true          # Log raw malicious payloads
+
+deception:
+  active_profile: "apache-legacy"   # Default bait identity
+  breadcrumbs_enabled: true         # Drop fake lure files
+  breadcrumbs_path: "/tmp/boat-lures"
+
+logging:
+  log_file: "logs/wamai.log"  # Go engine output log
+  log_level: "info"           # debug | info | warn | error
+
+cli:
+  refresh_interval_ms: 1000   # Dashboard refresh rate

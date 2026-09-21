@@ -1,0 +1,48 @@
+# Defense Matrix — Bait Deception Profiles
+# -----------------------------------------
+# Each profile defines a fake server identity
+# broadcasted to attract and deceive attackers.
+
+profiles:
+
+  apache-legacy:
+    banner: "Apache/2.2.8 (Ubuntu) PHP/5.2.4-2ubuntu5"
+    headers:
+      Server: "Apache/2.2.8 (Ubuntu) PHP/5.2.4-2ubuntu5"
+      X-Powered-By: "PHP/5.2.4-2ubuntu5"
+      X-AspNet-Version: "2.0.50727"
+    open_ports: [22, 80, 443, 3306, 5432]
+    default_creds:
+      admin: "admin"
+      root: "root"
+      user: "password"
+
+  iis-legacy:
+    banner: "Microsoft-IIS/6.0"
+    headers:
+      Server: "Microsoft-IIS/6.0"
+      X-Powered-By: "ASP.NET"
+      X-AspNet-Version: "1.1.4322"
+    open_ports: [80, 443, 1433, 3389]
+    default_creds:
+      administrator: "admin"
+      sa: "sa"
+
+  nginx-exposed:
+    banner: "nginx/1.10.3"
+    headers:
+      Server: "nginx/1.10.3"
+    open_ports: [22, 80, 8080, 9200]
+    default_creds:
+      admin: "1234"
+      elastic: ""
+
+  openssh-vulnerable:
+    banner: "OpenSSH_7.2p2 Ubuntu-4ubuntu2.1"
+    headers:
+      Server: "OpenSSH_7.2p2"
+    open_ports: [22, 2222]
+    default_creds:
+      root: "toor"
+      admin: "admin123"
+      ubuntu: "ubuntu"
