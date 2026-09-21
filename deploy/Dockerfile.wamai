@@ -1,0 +1,31 @@
+# Defense Matrix — Main Engine Container
+
+FROM golang:1.21-alpine AS builder
+
+WORKDIR /app
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source
+COPY . .
+
+# Build the engine
+RUN CGO_ENABLED=0 GOOS=linux go build -o wamai ./cmd/wamai
+
+# Final lightweight image
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+
+# Copy binary and config
+COPY --from=builder /app/wamai .
+COPY --from=builder /app/config ./config
+COPY --from=builder /app/logs ./logs
+
+EXPOSE 8080
+
+CMD ["./wamai"]

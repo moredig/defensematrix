@@ -1,0 +1,40 @@
+# Defense Matrix — Boat Container
+# A deliberately tempting, isolated trap environment
+
+FROM ubuntu:22.04
+
+# Install tempting services attackers love to find
+RUN apt-get update && apt-get install -y \
+    openssh-server \
+    apache2 \
+    mysql-client \
+    curl \
+    wget \
+    net-tools \
+    vim \
+    && apt-get clean
+
+# Set up weak SSH credentials as bait
+RUN mkdir /var/run/sshd && \
+    echo 'root:toor' | chpasswd && \
+    echo 'admin:admin' | chpasswd || true && \
+    useradd -m -s /bin/bash admin && \
+    echo 'admin:admin' | chpasswd
+
+# Allow root SSH login — intentional bait
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+# Drop breadcrumb lure files
+RUN mkdir -p /var/www/html/backup && \
+    echo "db_password=Sup3rS3cr3t!" > /root/credentials.txt && \
+    echo "AWS_SECRET=wJalrXUtnFEMI/K7MDENG/bPxRfiCY" > /root/.env && \
+    echo "admin:admin123" > /var/www/html/backup/users.txt
+
+# Expose bait ports
+EXPOSE 22 80 443 3306 8080
+
+# Start SSH and Apache
+CMD service ssh start && \
+    service apache2 start && \
+    tail -f /dev/null

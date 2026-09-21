@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+
+  wamai-engine:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.wamai
+    container_name: wamai-engine
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../logs:/root/logs
+      - ../config:/root/config
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    networks:
+      - defense-net
+
+  boat-1:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.boat
+    container_name: boat-1
+    networks:
+      - defense-net
+    restart: unless-stopped
+
+  boat-2:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.boat
+    container_name: boat-2
+    networks:
+      - defense-net
+    restart: unless-stopped
+
+  boat-3:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.boat
+    container_name: boat-3
+    networks:
+      - defense-net
+    restart: unless-stopped
+
+networks:
+  defense-net:
+    driver: bridge
