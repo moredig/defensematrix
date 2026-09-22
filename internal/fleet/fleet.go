@@ -10,17 +10,27 @@ import (
 
 // Fleet manages the rolling trinity of Boats
 type Fleet struct {
-	mu     sync.Mutex
-	boats  [3]*Boat
-	docker *docker.Client
-	image  string // Docker image used for all boats
+	mu       sync.Mutex
+	boats    [3]*Boat
+	docker   *docker.Client
+	image    string // Docker image used for all boats
+	network  string
+	onRotate func()
+}
+
+// SetOnRotate registers a callback invoked after a successful rotation.
+func (f *Fleet) SetOnRotate(callback func()) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.onRotate = callback
 }
 
 // NewFleet initialises the three-boat rolling trinity
-func NewFleet(dockerClient *docker.Client, image string) *Fleet {
+func NewFleet(dockerClient *docker.Client, image string, networkName string) *Fleet {
 	return &Fleet{
-		docker: dockerClient,
-		image:  image,
+		docker:  dockerClient,
+		image:   image,
+		network: networkName,
 		boats: [3]*Boat{
 			NewBoat("boat-1", "frontline"),
 			NewBoat("boat-2", "shadow"),
@@ -37,7 +47,7 @@ func (f *Fleet) Launch(ctx context.Context) error {
 	fmt.Println("[WAMAI] Launching fleet...")
 
 	for _, boat := range f.boats {
-		id, err := f.docker.StartBoat(ctx, f.image, boat.Name)
+		id, err := f.docker.StartBoat(ctx, f.image, boat.Name, f.network)
 		if err != nil {
 			return fmt.Errorf("failed to launch %s: %w", boat.Name, err)
 		}
@@ -109,7 +119,7 @@ func (f *Fleet) Rotate(ctx context.Context) error {
 
 	// Step 3 — Recycle graveyard into new shadow
 	graveyard.Role = "shadow"
-	id, err := f.docker.StartBoat(ctx, f.image, graveyard.Name)
+	id, err := f.docker.StartBoat(ctx, f.image, graveyard.Name, f.network)
 	if err != nil {
 		return fmt.Errorf("recycle failed: %w", err)
 	}
@@ -120,5 +130,8 @@ func (f *Fleet) Rotate(ctx context.Context) error {
 	frontline.Demote()
 
 	fmt.Println("[WAMAI] Rotation complete.")
+	if f.onRotate != nil {
+		go f.onRotate()
+	}
 	return nil
 }

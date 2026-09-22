@@ -1,6 +1,8 @@
 package docker
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -8,10 +10,31 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // StartBoat spins up a new container from a given image, returns container ID
-func (c *Client) StartBoat(ctx context.Context, image string, name string) (string, error) {
+func (c *Client) StartBoat(ctx context.Context, image string, name string, networkName string) (string, error) {
+	existing, err := c.cli.ContainerInspect(ctx, name)
+	if err == nil {
+		if !existing.State.Running {
+			if err := c.cli.ContainerStart(ctx, existing.ID, types.ContainerStartOptions{}); err != nil {
+				return "", fmt.Errorf("failed to start existing container %s: %w", name, err)
+			}
+		}
+		return existing.ID, nil
+	}
+
+	var networkingConfig *network.NetworkingConfig
+	if networkName != "" {
+		networkingConfig = &network.NetworkingConfig{
+			EndpointsConfig: map[string]*network.EndpointSettings{
+				networkName: {},
+			},
+		}
+	}
+
 	resp, err := c.cli.ContainerCreate(ctx,
 		&container.Config{
 			Image: image,
@@ -20,7 +43,7 @@ func (c *Client) StartBoat(ctx context.Context, image string, name string) (stri
 		&container.HostConfig{
 			AutoRemove: false,
 		},
-		nil, nil, name,
+		networkingConfig, (*specs.Platform)(nil), name,
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to create container %s: %w", name, err)
@@ -32,6 +55,33 @@ func (c *Client) StartBoat(ctx context.Context, image string, name string) (stri
 
 	fmt.Printf("[WAMAI] Boat launched: %s (%s)\n", name, resp.ID[:12])
 	return resp.ID, nil
+}
+
+// CopyFiles copies named files into a directory inside a running container.
+func (c *Client) CopyFiles(ctx context.Context, containerID string, targetDir string, files map[string]string) error {
+	var archive bytes.Buffer
+	tarWriter := tar.NewWriter(&archive)
+	for name, content := range files {
+		header := &tar.Header{
+			Name: name,
+			Mode: 0644,
+			Size: int64(len(content)),
+		}
+		if err := tarWriter.WriteHeader(header); err != nil {
+			return fmt.Errorf("failed to archive %s: %w", name, err)
+		}
+		if _, err := tarWriter.Write([]byte(content)); err != nil {
+			return fmt.Errorf("failed to archive %s: %w", name, err)
+		}
+	}
+	if err := tarWriter.Close(); err != nil {
+		return fmt.Errorf("failed to finalize container files: %w", err)
+	}
+
+	if err := c.cli.CopyToContainer(ctx, containerID, targetDir, &archive, types.CopyToContainerOptions{}); err != nil {
+		return fmt.Errorf("failed to copy files into container %s: %w", containerID[:12], err)
+	}
+	return nil
 }
 
 // NukeBoat forcefully stops and removes a container instantly

@@ -2,19 +2,8 @@ import argparse
 from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer, Log, Static
 from textual.containers import Horizontal
-from rich.text import Text
 
-from renderer import render_boat_card, render_fleet_grid, render_header, render_stats
 from log_pipe import LogPipe
-
-
-# Mock fleet state — will be replaced by live Go engine output
-MOCK_FLEET = [
-    {"name": "boat-1", "role": "frontline",  "state": "IDLE",  "container_id": "a1b2c3d4e5f6"},
-    {"name": "boat-2", "role": "shadow",     "state": "IDLE",  "container_id": "b2c3d4e5f6a1"},
-    {"name": "boat-3", "role": "graveyard",  "state": "NUKED", "container_id": "c3d4e5f6a1b2"},
-]
-
 
 class BoatCard(Static):
     """A single boat status card widget."""
@@ -93,17 +82,16 @@ class DefenseMatrixDashboard(App):
         self.pipe = LogPipe(log_file)
         self.hit_count = 0
         self.rotation_count = 0
-        self.fleet = MOCK_FLEET
+        self.connection_count = 0
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
 
         with Horizontal(id="fleet-row"):
-            for boat in self.fleet:
-                yield BoatCard(boat, id=f"card-{boat['name']}")
+            yield Static("Fleet state is reported by the engine log.")
 
         yield Static(
-            f"⚡ Connections: 0   🎯 Hits: 0   🔄 Rotations: 0",
+            "Connections: 0   Hits: 0   Rotations: 0",
             id="stats-bar"
         )
 
@@ -118,20 +106,23 @@ class DefenseMatrixDashboard(App):
 
     def refresh_logs(self) -> None:
         """Pulls new log events and updates the display."""
-        if self.log_file:
-            for event in self.pipe.read_from_file(self.log_file):
-                self.write_log(event["message"], event["level"])
-        else:
-            import random
-            mock_events = [
-                ("[WAMAI] boat-1: connection from 45.33.32.156", "YELLOW"),
-                ("[WAMAI] HIT — Pattern: SQL Injection | Level: HIGH", "RED"),
-                ("[WAMAI] Rotation triggered — nuking frontline...", "RED"),
-                ("[WAMAI] boat-2 promoted to frontline.", "BLUE"),
-                ("[WAMAI] Recycler: rotation successful.", "BLUE"),
-            ]
-            event = random.choice(mock_events)
-            self.write_log(event[0], event[1])
+        if not self.log_file:
+            return
+
+        for event in self.pipe.read_from_file(self.log_file):
+            message = event["message"]
+            lowered = message.lower()
+            if "hit" in lowered:
+                self.hit_count += 1
+            if "rotation" in lowered or "nuked" in lowered:
+                self.rotation_count += 1
+            if "connection tracked" in lowered:
+                self.connection_count += 1
+            self.write_log(message, event["level"])
+
+        self.query_one("#stats-bar", Static).update(
+            f"Connections: {self.connection_count}   Hits: {self.hit_count}   Rotations: {self.rotation_count}"
+        )
 
     def write_log(self, message: str, level: str = "INFO") -> None:
         """Writes a colored log line to the log panel."""

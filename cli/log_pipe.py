@@ -1,6 +1,4 @@
 import sys
-import json
-import subprocess
 from datetime import datetime
 
 
@@ -13,6 +11,7 @@ class LogPipe:
     def __init__(self, log_file: str = None):
         self.log_file = log_file
         self.events = []
+        self.position = 0
 
     def parse_line(self, line: str) -> dict:
         """Parses a raw [WAMAI] log line into a structured event."""
@@ -41,18 +40,23 @@ class LogPipe:
         return event
 
     def read_from_file(self, path: str):
-        """Reads and parses log events from a file."""
+        """Reads and parses only new log events from a file."""
         try:
             with open(path, "r") as f:
-                for line in f:
+                f.seek(0, 2)
+                end = f.tell()
+                if end < self.position:
+                    self.position = 0
+                f.seek(self.position)
+                while True:
+                    line = f.readline()
+                    if not line:
+                        break
+                    self.position = f.tell()
                     if "[WAMAI]" in line:
                         yield self.parse_line(line)
         except FileNotFoundError:
-            yield {
-                "timestamp": datetime.now().strftime("%H:%M:%S"),
-                "level": "INFO",
-                "message": "[WAMAI] Waiting for engine...",
-            }
+            return
 
     def read_from_stdin(self):
         """Reads and parses log events from stdin pipe."""

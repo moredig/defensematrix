@@ -49,6 +49,9 @@ type Scanner struct {
 
 // NewScanner initialises a Scanner with loaded signatures
 func NewScanner(threshold int, onTrigger func()) *Scanner {
+	if threshold < 1 {
+		threshold = 1
+	}
 	return &Scanner{
 		signatures: LoadSignatures(),
 		threshold:  threshold,
@@ -92,7 +95,9 @@ func (s *Scanner) Scan(payload string) {
 func (s *Scanner) GetHits() []Hit {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.hits
+	hits := make([]Hit, len(s.hits))
+	copy(hits, s.hits)
+	return hits
 }
 
 // truncate shortens a string for clean logging

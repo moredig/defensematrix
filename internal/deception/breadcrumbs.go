@@ -63,6 +63,9 @@ STRIPE_KEY=sk_live_fakestripekey1234567890`,
 // DropBreadcrumbs writes fake lure files into a target directory
 func DropBreadcrumbs(targetDir string) error {
 	crumbs := GenerateBreadcrumbs()
+	if err := os.MkdirAll(targetDir, 0750); err != nil {
+		return fmt.Errorf("failed to create breadcrumb directory: %w", err)
+	}
 
 	for _, crumb := range crumbs {
 		path := filepath.Join(targetDir, crumb.Filename)

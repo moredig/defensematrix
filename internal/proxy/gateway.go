@@ -1,7 +1,9 @@
 package proxy
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -53,18 +55,42 @@ func (g *Gateway) director(req *http.Request) {
 	req.URL.Host = g.targetURL.Host
 	req.Host = g.targetURL.Host
 
-	// Scan the raw request URI and body for threats
-	payload := req.URL.RawQuery + req.URL.Path
-	g.scanner.Scan(payload)
 }
 
 // ServeHTTP handles incoming requests — injects bait headers and proxies
 func (g *Gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if err := g.scanRequest(r); err != nil {
+		http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+
 	// Inject fake server identity headers
 	deception.InjectHeaders(w, g.baitProfile)
 
 	// Forward to the active boat
 	g.proxy.ServeHTTP(w, r)
+}
+
+func (g *Gateway) scanRequest(r *http.Request) error {
+	payload := r.URL.RequestURI()
+	for key, values := range r.Header {
+		payload += "\n" + key + ": " + fmt.Sprint(values)
+	}
+
+	if r.Body != nil {
+		body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20+1))
+		if err != nil {
+			return err
+		}
+		if len(body) > 1<<20 {
+			return fmt.Errorf("request body exceeds 1 MiB")
+		}
+		r.Body = io.NopCloser(bytes.NewReader(body))
+		payload += "\n" + string(body)
+	}
+
+	g.scanner.Scan(payload)
+	return nil
 }
 
 // Retarget switches the proxy to point at a new boat address

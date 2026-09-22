@@ -6,7 +6,7 @@ server:
   host: "0.0.0.0"             # Bind address
 
 fleet:
-  boat_image: "ubuntu:22.04"  # Base Docker image for all boats
+  boat_image: "defensematrix-boat:latest"  # Built bait image for all boats
   boat_count: 3               # Always 3 — frontline, shadow, graveyard
   recycle_interval_ms: 500    # How often recycler checks boat states
 

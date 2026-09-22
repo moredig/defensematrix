@@ -102,7 +102,7 @@ Boats broadcast irresistible fake identities:
 
 ### Prerequisites
 - Docker + Docker Compose
-- Go 1.21+
+- Go 1.24+
 - Python 3.8+
 
 ### Run the Engine
