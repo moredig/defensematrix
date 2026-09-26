@@ -64,7 +64,7 @@ docker compose -f deploy/docker-compose.yml down --rmi all
 Do not expose this setup to untrusted networks. The engine has access to the Docker socket and manages the backend containers.
 
 ## Disclaimer
-This project was built using Artificial Intelligence. This is simply an idea I had and really eanted to put out there. This is not meant to be used as a massive, production grade tool. Thank you.
+This project was built using Artificial Intelligence. This is simply an idea I had and really wanted to put out there. This is not meant to be used as a massive, production grade tool. Thank you.
 
 ## Project Contents
 
