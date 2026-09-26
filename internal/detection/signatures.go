@@ -21,24 +21,9 @@ func LoadSignatures() []*Signature {
 			Level: ThreatMedium,
 		},
 		{
-			Name:  "Brute Force",
-			Regex: regexp.MustCompile(`(?i)(failed\s+password|invalid\s+user|authentication\s+failure)`),
-			Level: ThreatMedium,
-		},
-		{
-			Name:  "Port Scan",
-			Regex: regexp.MustCompile(`(?i)(nmap|masscan|zmap|nikto|dirbuster)`),
-			Level: ThreatLow,
-		},
-		{
 			Name:  "Shell Injection",
 			Regex: regexp.MustCompile(`(?i)(;|\||\|\||&&)\s*(cat|ls|pwd|whoami|wget|curl|bash|sh)`),
 			Level: ThreatHigh,
-		},
-		{
-			Name:  "Credential Stuffing",
-			Regex: regexp.MustCompile(`(?i)(admin|root|password|passwd|credentials)`),
-			Level: ThreatLow,
 		},
 	}
 }

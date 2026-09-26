@@ -11,6 +11,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/errdefs"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -99,6 +100,34 @@ func (c *Client) NukeBoat(ctx context.Context, containerID string) error {
 	}
 
 	fmt.Printf("[WAMAI] Boat nuked: %s\n", containerID[:12])
+	return nil
+}
+
+// StopBoat gracefully stops a running boat without removing its container.
+func (c *Client) StopBoat(ctx context.Context, containerID string) error {
+	if containerID == "" {
+		return nil
+	}
+
+	state, err := c.cli.ContainerInspect(ctx, containerID)
+	if err != nil {
+		if errdefs.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to inspect boat %s: %w", containerID[:12], err)
+	}
+	if !state.State.Running {
+		return nil
+	}
+
+	timeout := 5 * time.Second
+	if err := c.cli.ContainerStop(ctx, containerID, &timeout); err != nil {
+		if errdefs.IsNotModified(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to stop boat %s: %w", containerID[:12], err)
+	}
+	fmt.Printf("[WAMAI] Boat stopped: %s\n", containerID[:12])
 	return nil
 }
 

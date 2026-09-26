@@ -11,6 +11,7 @@ import (
 
 	"github.com/moredig/defensematrix/internal/deception"
 	"github.com/moredig/defensematrix/internal/detection"
+	"github.com/moredig/defensematrix/internal/security"
 )
 
 // Gateway is the main reverse proxy and traffic interceptor
@@ -18,6 +19,7 @@ type Gateway struct {
 	mu          sync.RWMutex
 	targetURL   *url.URL
 	proxy       *httputil.ReverseProxy
+	wafHandler  http.Handler
 	scanner     *detection.Scanner
 	baitProfile *deception.BaitProfile
 }
@@ -41,6 +43,10 @@ func NewGateway(targetAddr string, scanner *detection.Scanner) (*Gateway, error)
 	g.proxy = &httputil.ReverseProxy{
 		Director: g.director,
 	}
+	g.wafHandler, err = security.WrapHTTP(http.HandlerFunc(g.forwardRequest))
+	if err != nil {
+		return nil, fmt.Errorf("initialize HTTP request firewall: %w", err)
+	}
 
 	fmt.Printf("[WAMAI] Gateway armed — target: %s\n", targetAddr)
 	return g, nil
@@ -63,7 +69,10 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
 		return
 	}
+	g.wafHandler.ServeHTTP(w, r)
+}
 
+func (g *Gateway) forwardRequest(w http.ResponseWriter, r *http.Request) {
 	// Inject fake server identity headers
 	deception.InjectHeaders(w, g.baitProfile)
 

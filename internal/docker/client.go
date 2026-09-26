@@ -19,13 +19,13 @@ func New() (*Client, error) {
 		client.WithAPIVersionNegotiation(),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to Docker daemon: %w", err)
+		return nil, fmt.Errorf("Docker daemon is unavailable; start Docker Desktop or the Docker engine and retry: %w", err)
 	}
 
 	// Ping the daemon to confirm it's alive
 	_, err = cli.Ping(context.Background())
 	if err != nil {
-		return nil, fmt.Errorf("Docker daemon unreachable: %w", err)
+		return nil, fmt.Errorf("Docker daemon is unavailable; start Docker Desktop or the Docker engine and retry: %w", err)
 	}
 
 	fmt.Println("[WAMAI] Docker daemon connected.")

@@ -6,12 +6,16 @@ services:
       dockerfile: deploy/Dockerfile.wamai
     container_name: wamai-engine
     ports:
-      - "8080:8080"
+      - "${WAMAI_BIND_ADDRESS:-127.0.0.1}:8080:8080"
+      - "127.0.0.1:9090:9090"
+    environment:
+      WAMAI_BIND_ADDRESS: "${WAMAI_BIND_ADDRESS:-127.0.0.1}"
+      WAMAI_PANEL_ADDR: "0.0.0.0:9090"
     volumes:
       - ../logs:/root/logs
       - ../config:/root/config
       - /var/run/docker.sock:/var/run/docker.sock
-    restart: unless-stopped
+    restart: on-failure
     depends_on:
       - boat-1
       - boat-2

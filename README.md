@@ -1,149 +1,69 @@
-# 🛡️ Defense Matrix
+# Defense Matrix
 
-> *"The best trap is one the attacker walks into willingly."*
+Defense Matrix is a Go HTTP proxy that routes traffic through Docker-managed containers and scans requests for configured signatures.
 
-A dynamic **Cyber Deception and Automated Moving Target Defense (AMTD)** system.
-Built in Go and Python. Designed to exhaust attackers, burn zero-days, and leave production untouched.
+The gateway uses Coraza with the OWASP Core Rule Set to block recognized HTTP attack requests before they reach a boat. This covers common web attack patterns, but it is not a network firewall or IDS and cannot inspect non-HTTP traffic or guarantee detection of every tool or payload. The current backend is the boat fleet, not a production application. Use network-level firewall/IDS controls separately.
 
----
+## Inspiration
 
-## 🧠 What It Does
+The name and threat-response idea are inspired by Wamai from *Tom Clancy's Rainbow Six Siege*. His Mag-NET System pulls incoming projectiles toward its device, where they detonate. This project adapts that idea to HTTP traffic by scanning requests and rotating isolated backend containers when a threat is detected. Defense Matrix is an independent project and is not affiliated with Ubisoft.
 
-Instead of blocking traffic like a firewall, or passively logging like a honeypot —
-Defense Matrix treats infrastructure as **entirely ephemeral**.
+## Requirements
 
-It intercepts incoming connections, routes threats into ultra-isolated **"Boats"** (micro-containers),
-and automatically destroys and regenerates those environments the moment an attack is detected.
+- Docker Desktop or Docker Engine with Docker Compose v2
+- Linux containers enabled in Docker Desktop
 
-Attackers waste their tools. Your real system never gets touched.
+The engine uses the Docker socket to manage the backend containers. Access to that socket grants control over the Docker host.
 
----
+## Run with Docker Compose
 
-## ⚙️ Architecture
+Run these commands from the repository root. Start Docker Desktop first on Windows.
 
-    [ Internet ] → [ Wamai Gateway ] → [ Boat-1: Frontline ]
-                                            ↓ (attack detected)
-                                       [ Boat-2: Shadow ] ← promoted instantly
-                                       [ Boat-1 ] → nuked & recycled
+Build and start the stack the first time. This keeps live logs in the terminal:
 
-### Core Layers
+```sh
+docker compose -f deploy/docker-compose.yml up --build
+```
 
-| Layer | Tech | Role |
-|---|---|---|
-| Wamai Gateway | Go / net/http/httputil | Reverse proxy — intercepts all traffic |
-| Fleet Manager | Go / Docker SDK | Manages the rolling three-boat rotation |
-| Recycler | Go goroutines | Auto-triggers rotation on nuke events |
-| Scanner | Go / regexp | Pattern-matches raw payloads for threats |
-| Deception Engine | Go | Injects fake banners, breadcrumbs, lure files |
-| CLI Dashboard | Python / Textual | Live terminal perimeter monitor |
+The initial build downloads base images and may take a few minutes. On later runs, start the already-built images with:
 
----
+```sh
+docker compose -f deploy/docker-compose.yml up
+```
 
-## 🚢 The Rolling Trinity
+Both commands stay attached and show live logs. Press `Ctrl+C` to stop the stack. Add `--build` again after changing source or Dockerfiles.
 
-| Boat | Role | State |
-|---|---|---|
-| Boat-1 | Frontline | 🔵 Absorbing live traffic, broadcasting bait |
-| Boat-2 | Shadow | ⚫ Sterile clone, hot standby |
-| Boat-3 | Graveyard | 🔴 Just nuked — recycling into new shadow |
+Published web traffic is restricted to this computer by default. To allow access from another device on your LAN, set this computer's LAN address before starting Compose:
 
-The moment an attack signature triggers:
-1. Traffic reroutes to Boat-2 in **under 10ms**
-2. Boat-1 is force-killed and wiped from RAM and disk
-3. Boat-3 reprovisioned as the new Shadow
-4. Loop resets — attacker is back at square one
+```powershell
+$env:WAMAI_BIND_ADDRESS = "192.168.1.25"
+docker compose -f deploy/docker-compose.yml up
+```
 
----
+Replace the example address with this computer's LAN address.
 
-## 🎭 Deception Layer
+HTTP request bodies larger than 1 MiB are rejected. Requests that match an active WAF blocking rule receive HTTP `403` and are not forwarded to a boat.
 
-Boats broadcast irresistible fake identities:
+Stop Wamai and remove its containers and network with:
 
-- **Outdated banners** — Apache 2.2, IIS 6.0, nginx 1.10, OpenSSH 7.2
-- **Open ports** — SSH, MySQL, Postgres, RDP left deliberately open
-- **Weak credentials** — admin/admin, root/toor accepted on purpose
-- **Lure files** — fake credentials.txt, .env, partial SQL dumps dropped inside
+```sh
+docker compose -f deploy/docker-compose.yml down
+```
 
----
+This keeps the built images and your project files, configuration, and logs. To also remove the images built for Wamai and its boats, run:
 
-## 🔍 Detection Signatures
+```sh
+docker compose -f deploy/docker-compose.yml down --rmi all
+```
 
-| Signature | Threat Level |
-|---|---|
-| SQL Injection | 🔴 HIGH |
-| Shell Injection | 🔴 HIGH |
-| Directory Traversal | 🔴 HIGH |
-| XSS Attempt | 🟠 MEDIUM |
-| Brute Force | 🟠 MEDIUM |
-| Port Scan | 🟡 LOW |
-| Credential Stuffing | 🟡 LOW |
+Do not expose this setup to untrusted networks. The engine has access to the Docker socket and manages the backend containers.
 
----
+## Project Contents
 
-## 🖥️ CLI Dashboard
-
-    ┌─────────────────────────────────────────────────┐
-    │           DEFENSE MATRIX — LIVE PERIMETER        │
-    ├──────────────┬──────────────┬───────────────────┤
-    │   BOAT-1     │   BOAT-2     │   BOAT-3          │
-    │ 🔵 IDLE      │ 🔵 IDLE      │ 🔴 NUKED          │
-    │ FRONTLINE    │ SHADOW       │ GRAVEYARD         │
-    ├─────────────────────────────────────────────────┤
-    │ ⚡ Connections: 3  🎯 Hits: 12  🔄 Rotations: 2 │
-    ├─────────────────────────────────────────────────┤
-    │ [WAMAI] HIT — SQL Injection | Level: HIGH       │
-    │ [WAMAI] Rotation triggered — nuking frontline   │
-    │ [WAMAI] boat-2 promoted to frontline            │
-    └─────────────────────────────────────────────────┘
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Docker + Docker Compose
-- Go 1.24+
-- Python 3.8+
-
-### Run the Engine
-
-    git clone https://github.com/moredig/defensematrix.git
-    cd defensematrix
-    go run ./cmd/wamai
-
-### Run the Dashboard
-
-    cd cli
-    pip install -r ../requirements.txt
-    python dashboard.py
-
-### Deploy with Docker
-
-    cd deploy
-    docker-compose up --build
-
----
-
-## 📁 Project Structure
-
-    defensematrix/
-    ├── cmd/wamai/          # Go entrypoint
-    ├── internal/
-    │   ├── docker/         # Docker daemon client + orchestrator
-    │   ├── fleet/          # Boat state machine + rotation
-    │   ├── detection/      # Traffic scanner + signatures
-    │   ├── deception/      # Bait profiles + breadcrumbs
-    │   └── proxy/          # Reverse proxy gateway + multiplexer
-    ├── cli/                # Python terminal dashboard
-    ├── config/             # YAML configuration
-    ├── deploy/             # Dockerfiles + compose
-    └── logs/               # Engine output
-
----
-
-## ⚖️ License
-
-Apache 2.0 — see [LICENSE](LICENSE)
-
-> **Legal Notice:** This tool is designed for defensive research and infrastructure protection on systems you own or have explicit permission to defend. Deploying deception infrastructure against unauthorized targets may violate computer fraud laws in your jurisdiction.
+- `cmd/wamai`: Go application entry point
+- `internal/`: HTTP handling, container orchestration, fleet management, and request scanning
+- `deploy/`: Dockerfiles and Compose configuration
+- `config/`: application profiles and settings
+- `cli/`: terminal log monitor
+- `logs/`: engine log output
 

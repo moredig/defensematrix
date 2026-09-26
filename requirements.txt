@@ -1,2 +1,2 @@
-textual>=0.50
-rich>=13.7
+# No Python dependencies required for the terminal dashboard.
+# The CLI uses the standard library only.

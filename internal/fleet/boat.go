@@ -14,6 +14,7 @@ const (
 	StateProbing                      // Yellow — being scanned/fuzzed
 	StateInfiltrated                  // Orange — attacker inside, logging keystrokes
 	StateNuked                        // Red — kill switch triggered, recycling
+	StateStopped                      // Gray — paused by operator
 )
 
 func (s BoatState) String() string {
@@ -26,6 +27,8 @@ func (s BoatState) String() string {
 		return "INFILTRATED"
 	case StateNuked:
 		return "NUKED"
+	case StateStopped:
+		return "STOPPED"
 	default:
 		return "UNKNOWN"
 	}

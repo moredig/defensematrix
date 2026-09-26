@@ -37,6 +37,11 @@ type Hit struct {
 	Timestamp time.Time
 }
 
+type Stats struct {
+	TotalHits  int   `json:"totalHits"`
+	RecentHits []Hit `json:"recentHits"`
+}
+
 // Scanner watches raw traffic streams for malicious patterns
 type Scanner struct {
 	mu         sync.Mutex
@@ -98,6 +103,23 @@ func (s *Scanner) GetHits() []Hit {
 	hits := make([]Hit, len(s.hits))
 	copy(hits, s.hits)
 	return hits
+}
+
+// GetStats returns the hit total and a copy of the newest hits.
+func (s *Scanner) GetStats(recentLimit int) Stats {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if recentLimit < 0 {
+		recentLimit = 0
+	}
+	start := len(s.hits) - recentLimit
+	if start < 0 {
+		start = 0
+	}
+	recentHits := make([]Hit, len(s.hits)-start)
+	copy(recentHits, s.hits[start:])
+	return Stats{TotalHits: len(s.hits), RecentHits: recentHits}
 }
 
 // truncate shortens a string for clean logging
