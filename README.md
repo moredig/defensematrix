@@ -2,7 +2,7 @@
 
 Defense Matrix is a Go HTTP proxy that routes traffic through Docker-managed containers and scans requests for configured signatures.
 
-The gateway uses Coraza with the OWASP Core Rule Set to block recognized HTTP attack requests before they reach a boat. This covers common web attack patterns, but it is not a network firewall or IDS and cannot inspect non-HTTP traffic or guarantee detection of every tool or payload. The current backend is the boat fleet, not a production application. Use network-level firewall/IDS controls separately.
+The gateway uses Coraza with the OWASP Core Rule Set to block recognized HTTP attack requests before they reach a boat. This covers common web attack patterns, but it is not a network firewall or IDS and cannot inspect non-HTTP traffic or guarantee detection of every tool or payload. Use network-level firewall/IDS controls separately.
 
 ## Inspiration
 
@@ -17,9 +17,14 @@ The engine uses the Docker socket to manage the backend containers. Access to th
 
 ## Run with Docker Compose
 
-Run these commands from the repository root. Start Docker Desktop first on Windows.
+Clone the repository, then enter its folder. Start Docker Desktop first on Windows.
 
-Build and start the stack the first time. This keeps live logs in the terminal:
+```sh
+git clone https://github.com/moredig/defensematrix.git
+cd defensematrix
+```
+
+Build and start the stack from the repository root. This keeps live logs in the terminal:
 
 ```sh
 docker compose -f deploy/docker-compose.yml up --build
@@ -57,6 +62,9 @@ docker compose -f deploy/docker-compose.yml down --rmi all
 ```
 
 Do not expose this setup to untrusted networks. The engine has access to the Docker socket and manages the backend containers.
+
+## Disclaimer
+This project was built using Artificial Intelligence. This is simply an idea I had and really eanted to put out there. This is not meant to be used as a massive, production grade tool. Thank you.
 
 ## Project Contents
 
